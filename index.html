@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chatbot Địa đạo Củ Chi</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #202123;
+      --muted: #777b82;
+      --line: #e5e7eb;
+      --soft: #f7f7f8;
+      --accent: #315f48;
+      --accent-hover: #244b38;
+      --user-bubble: #f1f3f2;
+      --sidebar-bg: #f9faf9;
+      --sidebar-w: 260px;
+      --shadow: 0 8px 28px rgba(0, 0, 0, .07);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; height: 100dvh; min-height: 480px; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: transform .25s;
+    }
+    .sidebar-header {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .new-chat-btn {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background .15s;
+    }
+    .new-chat-btn:hover { background: var(--soft); }
+    .new-chat-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .session-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 10px 10px;
+    }
+    .session-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #555;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: background .15s;
+      margin-bottom: 2px;
+    }
+    .session-item:hover { background: #eef1ef; }
+    .session-item.active { background: #e2e8e4; color: var(--text); font-weight: 500; }
+
+    /* ── Main area ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    .topbar {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; letter-spacing: -.2px; }
+    .brand-mark {
+      width: 30px; height: 30px; border-radius: 10px;
+      display: grid; place-items: center;
+      background: #eaf1ec; color: var(--accent);
+    }
+    .brand-mark svg { width: 19px; height: 19px; }
+    .top-note {
+      color: #6f756f; font-size: 12px;
+      border: 1px solid #e8ece8; background: #fbfcfb;
+      padding: 7px 11px; border-radius: 999px;
+    }
+    .menu-btn {
+      display: none;
+      border: 0; background: transparent;
+      color: #666; cursor: pointer; padding: 6px;
+    }
+    .menu-btn svg { width: 22px; height: 22px; }
+
+    /* ── Conversation ── */
+    .conversation { flex: 1; overflow-y: auto; padding: 26px 20px 22px; scroll-behavior: smooth; }
+    .welcome {
+      width: min(760px, 100%); margin: 14vh auto 0;
+      text-align: center;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .welcome-icon {
+      width: 54px; height: 54px; margin: 0 auto 20px;
+      border-radius: 18px; display: grid; place-items: center;
+      background: #edf3ee; color: var(--accent);
+    }
+    .welcome-icon svg { width: 29px; height: 29px; }
+    h1 { margin: 0; font-size: clamp(25px, 3vw, 32px); line-height: 1.28; font-weight: 550; letter-spacing: -.9px; }
+    .subtitle { margin: 12px auto 0; max-width: 540px; color: var(--muted); font-size: 15px; line-height: 1.65; }
+    .suggestions { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin: 28px auto 0; max-width: 660px; }
+    .suggestion {
+      border: 1px solid var(--line); border-radius: 999px;
+      background: #fff; color: #424743; padding: 10px 14px;
+      font: inherit; font-size: 13px; cursor: pointer;
+      transition: background .15s, border-color .15s, transform .15s;
+    }
+    .suggestion:hover { background: var(--soft); border-color: #cfd5d0; transform: translateY(-1px); }
+
+    /* ── Messages ── */
+    .messages { display: none; width: min(780px, 100%); margin: 0 auto; flex-direction: column; gap: 22px; padding-bottom: 18px; }
+    .message { display: flex; gap: 12px; align-items: flex-start; }
+    .message.user { justify-content: flex-end; }
+    .avatar {
+      width: 30px; height: 30px; flex: 0 0 30px;
+      border-radius: 10px; display: grid; place-items: center;
+      color: var(--accent); background: #edf3ee;
+    }
+    .avatar svg { width: 17px; height: 17px; }
+    .bubble {
+      max-width: min(78%, 620px); padding: 12px 16px;
+      border-radius: 18px; font-size: 15px; line-height: 1.65;
+      white-space: pre-wrap; overflow-wrap: anywhere;
+    }
+    .user .bubble { background: var(--user-bubble); border-top-right-radius: 6px; }
+    .assistant .bubble { padding-left: 0; }
+
+    /* Sources */
+    .sources {
+      margin-top: 8px; padding: 8px 12px;
+      background: #f5f7f5; border-radius: 10px;
+      font-size: 12px; color: #666;
+    }
+    .sources-title { font-weight: 600; margin-bottom: 4px; color: #444; }
+    .source-item { margin: 2px 0; }
+
+    /* Agent trace toggle */
+    .trace-toggle {
+      margin-top: 6px; font-size: 11px; color: var(--accent);
+      cursor: pointer; user-select: none;
+    }
+    .trace-toggle:hover { text-decoration: underline; }
+    .trace-detail {
+      display: none; margin-top: 6px; padding: 8px 10px;
+      background: #f0f2f0; border-radius: 8px;
+      font-size: 11px; color: #555; font-family: monospace;
+      white-space: pre-wrap; max-height: 200px; overflow-y: auto;
+    }
+
+    /* Loading */
+    .typing-indicator { display: flex; gap: 4px; padding: 12px 0 12px 0; }
+    .typing-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #aab0ac; animation: blink 1.4s infinite both;
+    }
+    .typing-dot:nth-child(2) { animation-delay: .2s; }
+    .typing-dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+
+    /* ── Composer ── */
+    .composer-area { flex-shrink: 0; padding: 10px 20px 22px; background: linear-gradient(to bottom, rgba(255,255,255,0), #fff 18%); }
+    .composer-wrap { width: min(960px, 100%); margin: 0 auto; }
+    .composer {
+      min-height: 64px; display: flex; align-items: flex-end; gap: 10px;
+      padding: 10px 12px 10px 16px; border: 1px solid #e4e5e7;
+      border-radius: 28px; background: #fff; box-shadow: var(--shadow);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .composer:focus-within { border-color: #c9d4cc; box-shadow: 0 8px 30px rgba(49,95,72,.10); }
+    #messageInput {
+      flex: 1; resize: none; border: 0; outline: 0;
+      background: transparent; color: var(--text);
+      font: inherit; font-size: 16px; line-height: 1.5;
+      padding: 8px 0; min-height: 40px; max-height: 160px;
+    }
+    #messageInput::placeholder { color: #92969a; }
+    .send-button {
+      width: 40px; height: 40px; flex: 0 0 40px;
+      display: grid; place-items: center;
+      border: 0; border-radius: 50%;
+      background: var(--accent); color: #fff; cursor: pointer;
+      transition: background .15s, transform .15s;
+    }
+    .send-button:hover { background: var(--accent-hover); }
+    .send-button:active { transform: scale(.96); }
+    .send-button:disabled { background: #d9dedb; cursor: default; }
+    .send-button svg { width: 19px; height: 19px; }
+    .disclaimer { margin: 11px auto 0; text-align: center; color: #969a97; font-size: 11px; line-height: 1.5; }
+
+    /* ── Error toast ── */
+    .error-toast {
+      position: fixed; top: 20px; right: 20px;
+      padding: 12px 18px; border-radius: 10px;
+      background: #fee; border: 1px solid #fcc; color: #c33;
+      font-size: 13px; opacity: 0; transform: translateY(-10px);
+      transition: opacity .3s, transform .3s; pointer-events: none; z-index: 100;
+    }
+    .error-toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed; left: 0; top: 0; bottom: 0;
+        z-index: 50; transform: translateX(-100%);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,.3); z-index: 49;
+      }
+      .sidebar-overlay.show { display: block; }
+      .menu-btn { display: block; }
+      .topbar { padding: 0 15px; height: 54px; }
+      .conversation { padding: 16px 14px; }
+      .welcome { margin-top: 10vh; }
+      .subtitle { font-size: 14px; }
+      .suggestions { margin-top: 22px; gap: 8px; }
+      .suggestion { font-size: 12px; padding: 9px 11px; }
+      .composer-area { padding: 8px 12px 14px; }
+      .composer { min-height: 58px; padding: 8px 9px 8px 12px; gap: 5px; }
+      #messageInput { font-size: 15px; }
+      .bubble { max-width: 86%; font-size: 14px; }
+      .disclaimer { font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button class="new-chat-btn" id="newChatBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+          Cuộc trò chuyện mới
+        </button>
+      </div>
+      <div class="session-list" id="sessionList"></div>
+    </aside>
+
+    <!-- Main area -->
+    <main class="main">
+      <header class="topbar">
+        <button class="menu-btn" id="menuBtn" type="button" aria-label="Menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3.5 13.5 12 5l8.5 8.5"/><path d="M6.5 11.5v8h11v-8"/><path d="M10 19.5v-5h4v5"/>
+            </svg>
+          </span>
+          <span>Địa đạo Củ Chi</span>
+        </div>
+        <span class="top-note">Trợ lý AI tham quan</span>
+      </header>
+
+      <section class="conversation" id="conversation" aria-live="polite">
+        <div class="welcome" id="welcome">
+          <div class="welcome-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3.5 20 8v8l-8 4.5L4 16V8l8-4.5Z"/><path d="m4.4 8.2 7.6 4.4 7.6-4.4M12 12.6v7.6"/><path d="M8.5 5.5 16 10"/>
+            </svg>
+          </div>
+          <h1>Chúng ta nên bắt đầu từ đâu?</h1>
+          <p class="subtitle">Hãy hỏi mình về lịch sử, hệ thống đường hầm hoặc những điều bạn muốn tìm hiểu trước chuyến tham quan Địa đạo Củ Chi.</p>
+          <div class="suggestions">
+            <button class="suggestion" type="button">Địa đạo Củ Chi có lịch sử như thế nào?</button>
+            <button class="suggestion" type="button">Giá vé tham quan là bao nhiêu?</button>
+            <button class="suggestion" type="button">Có những hoạt động trải nghiệm gì?</button>
+            <button class="suggestion" type="button">Đi xe buýt đến Địa đạo Củ Chi như thế nào?</button>
+            <button class="suggestion" type="button">Mình nên chuẩn bị gì trước khi tham quan?</button>
+          </div>
+        </div>
+        <div class="messages" id="messages"></div>
+      </section>
+
+      <section class="composer-area">
+        <div class="composer-wrap">
+          <form class="composer" id="chatForm">
+            <textarea id="messageInput" rows="1" placeholder="Hỏi về Địa đạo Củ Chi..." aria-label="Nhập câu hỏi"></textarea>
+            <button class="send-button" id="sendButton" type="submit" aria-label="Gửi tin nhắn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 14-7-4 14-3.5-5.5L5 12Z"/><path d="M11.5 13.5 19 5"/></svg>
+            </button>
+          </form>
+          <p class="disclaimer">Chatbot sử dụng mô hình AI chạy cục bộ · Thông tin mang tính tham khảo</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="error-toast" id="errorToast"></div>
+
+  <script>
+    // ── Config ──
+    const API_BASE = '';  // Same origin
+
+    // ── State ──
+    let currentSessionId = null;
+    let isWaiting = false;
+
+    // ── DOM ──
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('messageInput');
+    const messagesEl = document.getElementById('messages');
+    const welcomeEl = document.getElementById('welcome');
+    const conversationEl = document.getElementById('conversation');
+    const sendBtn = document.getElementById('sendButton');
+    const sessionListEl = document.getElementById('sessionList');
+    const sidebarEl = document.getElementById('sidebar');
+    const overlayEl = document.getElementById('sidebarOverlay');
+    const errorToastEl = document.getElementById('errorToast');
+
+    // ── Textarea auto-resize ──
+    function resizeInput() {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+    }
+    input.addEventListener('input', resizeInput);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    // ── Error handling ──
+    let errorTimer;
+    function showError(msg) {
+      errorToastEl.textContent = msg;
+      errorToastEl.classList.add('show');
+      clearTimeout(errorTimer);
+      errorTimer = setTimeout(() => errorToastEl.classList.remove('show'), 5000);
+    }
+
+    // ── Sidebar ──
+    document.getElementById('menuBtn').addEventListener('click', () => {
+      sidebarEl.classList.add('open');
+      overlayEl.classList.add('show');
+    });
+    overlayEl.addEventListener('click', () => {
+      sidebarEl.classList.remove('open');
+      overlayEl.classList.remove('show');
+    });
+
+    document.getElementById('newChatBtn').addEventListener('click', () => {
+      currentSessionId = null;
+      welcomeEl.style.display = '';
+      messagesEl.style.display = 'none';
+      messagesEl.innerHTML = '';
+      sidebarEl.classList.remove('open');
+      overlayEl.classList.remove('show');
+      loadSessions();
+    });
+
+    // ── Sessions ──
+    async function loadSessions() {
+      try {
+        const res = await fetch(`${API_BASE}/api/sessions`);
+        if (!res.ok) return;
+        const sessions = await res.json();
+        sessionListEl.innerHTML = '';
+        sessions.forEach(s => {
+          const el = document.createElement('div');
+          el.className = 'session-item' + (s.id === currentSessionId ? ' active' : '');
+          el.textContent = s.title || 'Cuộc trò chuyện mới';
+          el.addEventListener('click', () => loadSession(s.id));
+          sessionListEl.appendChild(el);
+        });
+      } catch (e) {
+        // Sidebar sessions fail silently
+      }
+    }
+
+    async function loadSession(sessionId) {
+      currentSessionId = sessionId;
+      welcomeEl.style.display = 'none';
+      messagesEl.style.display = 'flex';
+      messagesEl.innerHTML = '';
+      sidebarEl.classList.remove('open');
+      overlayEl.classList.remove('show');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/messages`);
+        if (!res.ok) throw new Error('Lỗi tải lịch sử');
+        const messages = await res.json();
+        messages.forEach(m => addMessage(m.content, m.role, m.sources ? JSON.parse(m.sources) : null));
+        scrollToBottom();
+        loadSessions();
+      } catch (e) {
+        showError('Không thể tải lịch sử cuộc trò chuyện.');
+      }
+    }
+
+    // ── Messages ──
+    function addMessage(text, role, sources = null, trace = null) {
+      const row = document.createElement('div');
+      row.className = 'message ' + role;
+
+      if (role === 'assistant') {
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 20 8v8l-8 4.5L4 16V8l8-4.5Z"/><path d="m4.4 8.2 7.6 4.4 7.6-4.4M12 12.6v7.6"/></svg>';
+        row.appendChild(avatar);
+      }
+
+      const contentWrap = document.createElement('div');
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = text;
+      contentWrap.appendChild(bubble);
+
+      // Show sources
+      if (sources && sources.length > 0 && role === 'assistant') {
+        const srcEl = document.createElement('div');
+        srcEl.className = 'sources';
+        srcEl.innerHTML = '<div class="sources-title">📚 Nguồn tham khảo:</div>' +
+          sources.map(s => `<div class="source-item">• [${s.id}] ${s.title} (${(s.score * 100).toFixed(0)}%)</div>`).join('');
+        contentWrap.appendChild(srcEl);
+      }
+
+      // Show agent trace toggle
+      if (trace && trace.steps && trace.steps.length > 0 && role === 'assistant') {
+        const toggle = document.createElement('div');
+        toggle.className = 'trace-toggle';
+        toggle.textContent = '🔍 Xem quá trình xử lý Agent';
+        const detail = document.createElement('div');
+        detail.className = 'trace-detail';
+        const traceText = `Intent: ${trace.detected_intent}\n` +
+          trace.steps.map(s => `[Bước ${s.step}] ${s.action}${s.tool ? ' → Tool: ' + s.tool : ''}\n  ↳ ${s.observation}`).join('\n') +
+          `\n\nThời gian: ${trace.total_time}s`;
+        detail.textContent = traceText;
+        toggle.addEventListener('click', () => {
+          detail.style.display = detail.style.display === 'block' ? 'none' : 'block';
+        });
+        contentWrap.appendChild(toggle);
+        contentWrap.appendChild(detail);
+      }
+
+      row.appendChild(contentWrap);
+      messagesEl.appendChild(row);
+      return row;
+    }
+
+    let timerInterval = null;
+    let timerSeconds = 0;
+
+    function addTypingIndicator() {
+      const row = document.createElement('div');
+      row.className = 'message assistant';
+      row.id = 'typingIndicator';
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 20 8v8l-8 4.5L4 16V8l8-4.5Z"/><path d="m4.4 8.2 7.6 4.4 7.6-4.4M12 12.6v7.6"/></svg>';
+      row.appendChild(avatar);
+      
+      const wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.flexDirection = 'column';
+      wrap.style.gap = '6px';
+
+      const indicator = document.createElement('div');
+      indicator.className = 'typing-indicator';
+      indicator.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+      wrap.appendChild(indicator);
+
+      const notice = document.createElement('div');
+      notice.id = 'typingNotice';
+      notice.style.fontSize = '12px';
+      notice.style.color = '#777';
+      notice.textContent = 'Trợ lý đang tra cứu và suy luận... (0s)';
+      wrap.appendChild(notice);
+
+      row.appendChild(wrap);
+      messagesEl.appendChild(row);
+
+      timerSeconds = 0;
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timerSeconds++;
+        const el = document.getElementById('typingNotice');
+        if (el) {
+          el.textContent = `Trợ lý đang tra cứu và suy luận... (${timerSeconds}s)`;
+        }
+      }, 1000);
+
+      return row;
+    }
+
+    function removeTypingIndicator() {
+      clearInterval(timerInterval);
+      const el = document.getElementById('typingIndicator');
+      if (el) el.remove();
+    }
+
+    function scrollToBottom() {
+      conversationEl.scrollTop = conversationEl.scrollHeight;
+    }
+
+    // ── Send message ──
+    async function sendMessage(text) {
+      const value = (text ?? input.value).trim();
+      if (!value || isWaiting) return;
+
+      welcomeEl.style.display = 'none';
+      messagesEl.style.display = 'flex';
+      addMessage(value, 'user');
+      input.value = '';
+      resizeInput();
+      scrollToBottom();
+
+      isWaiting = true;
+      sendBtn.disabled = true;
+      addTypingIndicator();
+      scrollToBottom();
+
+      try {
+        const res = await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: value,
+            session_id: currentSessionId,
+          }),
+        });
+
+        removeTypingIndicator();
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `Lỗi server (${res.status})`);
+        }
+
+        const data = await res.json();
+        currentSessionId = data.session_id;
+        addMessage(data.response, 'assistant', data.sources, data.agent_trace);
+        scrollToBottom();
+        loadSessions();
+
+      } catch (e) {
+        removeTypingIndicator();
+        if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+          showError('Không thể kết nối đến server. Hãy kiểm tra backend đã chạy chưa.');
+          addMessage('⚠ Không thể kết nối đến server. Vui lòng kiểm tra backend.', 'assistant');
+        } else {
+          showError(e.message);
+          addMessage(`⚠ Lỗi: ${e.message}`, 'assistant');
+        }
+        scrollToBottom();
+      } finally {
+        isWaiting = false;
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    // ── Event listeners ──
+    form.addEventListener('submit', (e) => { e.preventDefault(); sendMessage(); });
+    document.querySelectorAll('.suggestion').forEach(btn => {
+      btn.addEventListener('click', () => sendMessage(btn.textContent));
+    });
+
+    // ── Init ──
+    loadSessions();
+  </script>
+</body>
+</html>

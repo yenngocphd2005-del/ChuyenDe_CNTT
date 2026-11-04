@@ -1,0 +1,22 @@
+# Core dependencies
+torch
+transformers>=4.37.0
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.4
+
+# Web framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0
+
+# Database
+sqlalchemy>=2.0
+psycopg2-binary>=2.9
+
+# Data processing
+pandas
+openpyxl
+
+# Utilities
+python-dotenv>=1.0
+numpy
